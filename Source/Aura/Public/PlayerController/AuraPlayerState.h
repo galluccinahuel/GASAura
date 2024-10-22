@@ -24,7 +24,6 @@ public:
 	UPROPERTY()
 	TObjectPtr<UAttributeSet> AttributeSet;
 
-
 	// Heredado vía IAbilitySystemInterface
 	UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
