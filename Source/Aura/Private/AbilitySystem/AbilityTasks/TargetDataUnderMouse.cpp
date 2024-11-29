@@ -1,5 +1,4 @@
 #include "AbilitySystem/AbilityTasks/TargetDataUnderMouse.h"
-
 #include "AbilitySystemComponent.h"
 
 // Implementación de una tarea personalizada para obtener datos del cursor del jugador.
@@ -24,8 +23,22 @@ void UTargetDataUnderMouse::Activate()
     }
     else
     {
-        // En el servidor, se escuchará para recibir los datos del objetivo (falta implementar)
-        // todo: we are on the server, so listen for target data.
+        // En el servidor, se gestionan los datos del objetivo replicado
+        // Obtiene el handle y la clave de predicción de la habilidad activa
+        const FGameplayAbilitySpecHandle SpecHandle = GetAbilitySpecHandle();
+        const FPredictionKey ActivationPredictionKey = GetActivationPredictionKey();
+
+        // Añade una delegación para manejar la replicación de datos del objetivo
+        AbilitySystemComponent.Get()->AbilityTargetDataSetDelegate(SpecHandle, ActivationPredictionKey).AddUObject(this, &UTargetDataUnderMouse::OnTargetDataReplicatedCallback);
+
+        // Intenta llamar a los delegados de replicación de datos del objetivo si están configurados
+        const bool bCalledDelegate = AbilitySystemComponent.Get()->CallReplicatedTargetDataDelegatesIfSet(SpecHandle, ActivationPredictionKey);
+
+        // Si no se llamaron los delegados, espera los datos del jugador remoto
+        if (!bCalledDelegate)
+        {
+            SetWaitingOnRemotePlayerData();
+        }
     }
 }
 
@@ -38,7 +51,9 @@ void UTargetDataUnderMouse::SendMouseCursorData()
     APlayerController* PC = Ability->GetCurrentActorInfo()->PlayerController.Get();
 
     // Declara una estructura FHitResult para almacenar la información del impacto del cursor
-    const FHitResult CursorHit;
+    FHitResult CursorHit;
+
+    PC->GetHitResultUnderCursor(ECC_Visibility, false, CursorHit);
 
     // Crea un objeto de datos de objetivo, que es la información del objetivo que estamos apuntando
     FGameplayAbilityTargetDataHandle DataHandle;
@@ -60,6 +75,18 @@ void UTargetDataUnderMouse::SendMouseCursorData()
     );
 
     // Si está configurado para hacerlo, envía un evento de Broadcast con los datos de objetivo
+    if (ShouldBroadcastAbilityTaskDelegates())
+    {
+        ValidData.Broadcast(DataHandle);  // Difunde los datos válidos del objetivo
+    }
+}
+
+void UTargetDataUnderMouse::OnTargetDataReplicatedCallback(const FGameplayAbilityTargetDataHandle& DataHandle, FGameplayTag ActivationTag)
+{
+    // Consume los datos del objetivo replicados en el cliente después de que han sido recibidos
+    AbilitySystemComponent->ConsumeClientReplicatedTargetData(GetAbilitySpecHandle(), GetActivationPredictionKey());
+
+    // Si está configurado para hacerlo, difunde los datos del objetivo válidos
     if (ShouldBroadcastAbilityTaskDelegates())
     {
         ValidData.Broadcast(DataHandle);  // Difunde los datos válidos del objetivo
