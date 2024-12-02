@@ -38,6 +38,9 @@ private:
 	TObjectPtr<UInputAction> MoveAction;
 
 	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> ShiftAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
 	TObjectPtr<UAuraInputConfig> InputConfig;
 
 	UPROPERTY()
@@ -49,6 +52,10 @@ private:
 	void AbilityInputTagReleased(FGameplayTag InputTag);
 	void AbilityInputTagHeld(FGameplayTag InputTag);
 	void AutoRun();
+	void ShiftPressed() { bShiftKeyDown = true; }
+	void ShiftReleased(){ bShiftKeyDown = false; }
+
+	bool bShiftKeyDown = false;
 
 	TScriptInterface<IEnemyInterface> LastActor;
 	TScriptInterface<IEnemyInterface> ThisActor;

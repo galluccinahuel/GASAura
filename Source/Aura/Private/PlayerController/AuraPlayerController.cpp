@@ -31,28 +31,28 @@ void AAuraPlayerController::AutoRun()
 	// Obtenemos el Pawn controlado por este PlayerController
 	if (APawn* ControlledPawn = GetPawn())
 	{
-		// Encontramos la ubicación en el Spline que está más cerca de la posición actual del personaje
+		// Encontramos la ubicaciï¿½n en el Spline que estï¿½ mï¿½s cerca de la posiciï¿½n actual del personaje
 		// Esto nos ayuda a mantener al personaje alineado con el Spline mientras se mueve
 		const FVector LocationOnSpline = Spline->FindLocationClosestToWorldLocation(
 			ControlledPawn->GetActorLocation(), ESplineCoordinateSpace::World);
 
-		// Calculamos la dirección del movimiento basada en el punto más cercano en el Spline
+		// Calculamos la direcciï¿½n del movimiento basada en el punto mï¿½s cercano en el Spline
 		// Esto nos da un vector que apunta hacia adelante a lo largo del Spline
 		const FVector Direction = Spline->FindDirectionClosestToWorldLocation(
 			LocationOnSpline, ESplineCoordinateSpace::World);
 
-		// Aplicamos la dirección calculada como input de movimiento para el personaje
-		// Esto hará que el personaje se mueva en la dirección especificada
+		// Aplicamos la direcciï¿½n calculada como input de movimiento para el personaje
+		// Esto harï¿½ que el personaje se mueva en la direcciï¿½n especificada
 		ControlledPawn->AddMovementInput(Direction);
 
-		// Calculamos la distancia entre la ubicación actual en el Spline y el destino final
+		// Calculamos la distancia entre la ubicaciï¿½n actual en el Spline y el destino final
 		const float DistanceToDestination = (LocationOnSpline - CachedDestination).Length();
 
-		// Si la distancia al destino es menor o igual al radio de aceptación (AutoRunAcceptanceRadius),
+		// Si la distancia al destino es menor o igual al radio de aceptaciï¿½n (AutoRunAcceptanceRadius),
 		// consideramos que hemos llegado al destino y desactivamos el auto-run
 		if (DistanceToDestination <= AutoRunAcceptanceRadius)
 		{
-			bAutoRunning = false; // Detenemos el movimiento automático
+			bAutoRunning = false; // Detenemos el movimiento automï¿½tico
 		}
 	}
 }
@@ -113,6 +113,9 @@ void AAuraPlayerController::SetupInputComponent()
 	UAuraInputComponent* AuraInputComponent = CastChecked<UAuraInputComponent>(InputComponent);
 	AuraInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AAuraPlayerController::Move);
 	AuraInputComponent->BindAbilityActions(InputConfig, this, &ThisClass::AbilityInputTagPressed, &ThisClass::AbilityInputTagReleased, &ThisClass::AbilityInputTagHeld);
+	AuraInputComponent->BindAction(ShiftAction, ETriggerEvent::Started, this, &AAuraPlayerController::ShiftPressed);
+	AuraInputComponent->BindAction(ShiftAction, ETriggerEvent::Completed, this, &AAuraPlayerController::ShiftReleased );
+	
 }
 
 void AAuraPlayerController::Move(const FInputActionValue& InputActionValue)
@@ -147,82 +150,76 @@ void AAuraPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 {
 
-	// Comprobamos si el InputTag recibido es diferente al botón derecho del ratón (Right Mouse Button - RMB)
+	// Comprobamos si el InputTag recibido es diferente al botï¿½n derecho del ratï¿½n (Right Mouse Button - RMB)
 	if (!InputTag.MatchesTagExact(FAuraGameplayTags::Get().InputTag_RMB))
 	{
-		// Si tenemos un AbilitySystemComponent (ASC), delegamos el control a él
-		if (GetASC())
-		{
-			GetASC()->AbilityInputTagReleased(InputTag);
-		}
-		return; // Salimos de la función, ya que no es RMB
+		// Si tenemos un AbilitySystemComponent (ASC), delegamos el control a ï¿½l
+		if (GetASC()) GetASC()->AbilityInputTagReleased(InputTag);
+		return; // Salimos de la funciï¿½n, ya que no es RMB
 	}
-	// Si hemos llegado aquí, el InputTag es exactamente el RMB
-	if (bTargeting)
+
+	if (GetASC()) GetASC()->AbilityInputTagReleased(InputTag);
+	
+	// Si hemos llegado aquï¿½, el InputTag es exactamente el RMB
+	if (!bTargeting && !bShiftKeyDown)
 	{
 		// Si estamos en modo de targeting (apuntando), procesamos la habilidad usando el ASC
 		if (GetASC())
 		{
-			GetASC()->AbilityInputTagReleased(InputTag);
-		}
-	}
-	else
-	{
-		// Obtenemos el Pawn que estamos controlando
-		APawn* ControlledPawn = GetPawn();
+			// Obtenemos el Pawn que estamos controlando
+			const APawn* ControlledPawn = GetPawn();
 
-		// Comprobamos si el tiempo que se ha mantenido presionado (FollowTime) es menor que el umbral de tiempo corto (ShortPressThreshold)
-		if (FollowTime <= ShortPressThreshold && ControlledPawn)
-		{
-			// Intentamos encontrar una ruta de navegación desde la ubicación actual del personaje hasta el destino almacenado (CachedDestination)
-			if (UNavigationPath* NavPath = UNavigationSystemV1::FindPathToLocationSynchronously(
-				this, ControlledPawn->GetActorLocation(), CachedDestination))
+			// Comprobamos si el tiempo que se ha mantenido presionado (FollowTime) es menor que el umbral de tiempo corto (ShortPressThreshold)
+			if (FollowTime <= ShortPressThreshold && ControlledPawn)
 			{
-				// Limpiamos los puntos anteriores en el Spline, si es que existen
-				Spline->ClearSplinePoints();
-
-				// Iteramos a través de todos los puntos en la ruta calculada
-				for (const FVector& PointLocation : NavPath->PathPoints)
+				// Intentamos encontrar una ruta de navegaciï¿½n desde la ubicaciï¿½n actual del personaje hasta el destino almacenado (CachedDestination)
+				if (UNavigationPath* NavPath = UNavigationSystemV1::FindPathToLocationSynchronously(
+					this, ControlledPawn->GetActorLocation(), CachedDestination))
 				{
-					// Añadimos cada punto al Spline para crear una trayectoria visual
-					Spline->AddSplinePoint(PointLocation, ESplineCoordinateSpace::World);
+					// Limpiamos los puntos anteriores en el Spline, si es que existen
+					Spline->ClearSplinePoints();
 
-					// Dibujamos una esfera verde en cada punto para propósitos de depuración 
-					DrawDebugSphere(GetWorld(), PointLocation, 8.f, 8.f, FColor::Green, false, 3.f);
+					// Iteramos a travï¿½s de todos los puntos en la ruta calculada
+					for (const FVector& PointLocation : NavPath->PathPoints)
+					{
+						// Aï¿½adimos cada punto al Spline para crear una trayectoria visual
+						Spline->AddSplinePoint(PointLocation, ESplineCoordinateSpace::World);
+
+						// Dibujamos una esfera verde en cada punto para propï¿½sitos de depuraciï¿½n 
+						DrawDebugSphere(GetWorld(), PointLocation, 8.f, 8.f, FColor::Green, false, 3.f);
+					}
+
+					CachedDestination = NavPath->PathPoints[NavPath->PathPoints.Num() -1 ];
+
+					// Indicamos que estamos en modo de auto-corre (auto-running) activando la bandera
+					bAutoRunning = true;
 				}
-
-				CachedDestination = NavPath->PathPoints[NavPath->PathPoints.Num() -1 ];
-
-				// Indicamos que estamos en modo de auto-corre (auto-running) activando la bandera
-				bAutoRunning = true;
 			}
+
+			// Reiniciamos el tiempo de seguimiento (FollowTime) a 0 ya que hemos completado la acciï¿½n
+			FollowTime = 0.f;
+
+			// Desactivamos el modo de apuntado (targeting)
+			bTargeting = false;
 		}
-
-		// Reiniciamos el tiempo de seguimiento (FollowTime) a 0 ya que hemos completado la acción
-		FollowTime = 0.f;
-
-		// Desactivamos el modo de apuntado (targeting)
-		bTargeting = false;
 	}
-
-
 }
 
 void AAuraPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 {
-	// Comprobamos si el InputTag recibido es diferente al botón derecho del ratón (Right Mouse Button - RMB)
+	// Comprobamos si el InputTag recibido es diferente al botï¿½n derecho del ratï¿½n (Right Mouse Button - RMB)
 	if (!InputTag.MatchesTagExact(FAuraGameplayTags::Get().InputTag_RMB))
 	{
-		// Si tenemos un AbilitySystemComponent (ASC), delegamos el control a él
+		// Si tenemos un AbilitySystemComponent (ASC), delegamos el control a ï¿½l
 		if (GetASC())
 		{
 			GetASC()->AbilityInputTagHeld(InputTag);
 		}	
-		return; // Salimos de la función, ya que no es RMB
+		return; // Salimos de la funciï¿½n, ya que no es RMB
 	}
 
-	// Si hemos llegado aquí, el InputTag es exactamente el RMB
-	if (bTargeting)
+	// Si hemos llegado aquï¿½, el InputTag es exactamente el RMB
+	if (bTargeting || bShiftKeyDown)
 	{
 		// Si estamos en modo de targeting (apuntando), procesamos la habilidad usando el ASC
 		if (GetASC())
@@ -232,22 +229,22 @@ void AAuraPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 	}
 	else
 	{
-		// Si no estamos apuntando, iniciamos un movimiento hacia donde el jugador apunta con el ratón
+		// Si no estamos apuntando, iniciamos un movimiento hacia donde el jugador apunta con el ratï¿½n
 		FollowTime += GetWorld()->GetDeltaSeconds();
 
-		// Obtener la posición en el mundo debajo del cursor del ratón
+		// Obtener la posiciï¿½n en el mundo debajo del cursor del ratï¿½n
 
 		if (CursorHit.bBlockingHit)
 		{
-			CachedDestination = CursorHit.ImpactPoint; // Guardamos la posición del impacto en CachedDestination
+			CachedDestination = CursorHit.ImpactPoint; // Guardamos la posiciï¿½n del impacto en CachedDestination
 		}
 
-		// Mover al personaje controlado hacia la posición del cursor
+		// Mover al personaje controlado hacia la posiciï¿½n del cursor
 		if (APawn* ControlledPawn = GetPawn())
 		{
-			// Calculamos la dirección hacia la CachedDestination
+			// Calculamos la direcciï¿½n hacia la CachedDestination
 			const FVector WorldDirection = (CachedDestination - ControlledPawn->GetActorLocation()).GetSafeNormal();
-			// Añadimos input de movimiento en esa dirección
+			// Aï¿½adimos input de movimiento en esa direcciï¿½n
 			ControlledPawn->AddMovementInput(WorldDirection);
 		}
 	}
