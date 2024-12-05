@@ -53,7 +53,7 @@ void UOverlayWidgetController::BindCallbacksToDependencies()
 				FGameplayTag MessageTag = FGameplayTag::RequestGameplayTag(FName("Message"));
 				if (Tag.MatchesTag(MessageTag))
 				{
-					//todo broadcast the tag to the widget controller
+					
 					const FString Msj = FString::Printf(TEXT("GE Tag: %s"), *Tag.ToString());
 					GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Blue, Msj);
 
