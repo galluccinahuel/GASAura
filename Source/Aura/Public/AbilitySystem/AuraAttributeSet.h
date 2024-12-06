@@ -176,6 +176,15 @@ public:
 	ATTRIBUTE_ACCESSORS(UAuraAttributeSet, MaxMana)
 
 	/*
+	 * Meta Attributes
+	 */
+
+	UPROPERTY(BlueprintReadOnly, Category = "Meta Attributes")
+	FGameplayAttributeData IncomingDamage;
+	ATTRIBUTE_ACCESSORS(UAuraAttributeSet, IncomingDamage);
+	
+
+	/*
 	* vital attributes
 	*/
 
@@ -235,5 +244,4 @@ public:
 
 	UFUNCTION()
 	void OnRep_ManaRegeneration(const FGameplayAttributeData& OldManaRegeneration) const;
-
 };
