@@ -3,11 +3,11 @@
 
 FAuraAttributeInfo UAttributeInfoDataAsset::FindAttributeInfoForTag(const FGameplayTag& AttributeTag, bool bLogNotFound) const
 {
-	for (const FAuraAttributeInfo& info : AttributeInformation)
+	for (const FAuraAttributeInfo& Info : AttributeInformation)
 	{
-		if (info.AttributeTag.MatchesTagExact(AttributeTag))
+		if (Info.AttributeTag.MatchesTagExact(AttributeTag))
 		{
-			return info;
+			return Info;
 		}
 	}
 
