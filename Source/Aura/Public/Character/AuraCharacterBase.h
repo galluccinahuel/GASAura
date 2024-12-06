@@ -50,7 +50,7 @@ protected:
 	virtual void InitAbilityActorInfo();
 
 	void ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffectClass, float Level) const;
-	void InitilizeDefaultAttributes() const;
+	virtual void InitilizeDefaultAttributes() const;
 
 	void AddCharacterAbilities();
 
@@ -58,7 +58,7 @@ public:
 
 	AAuraCharacterBase();
 
-	// Heredado vía IAbilitySystemInterface
+	// Heredado vï¿½a IAbilitySystemInterface
 	UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
 	virtual FVector GetCombatSocketLocation() override;
