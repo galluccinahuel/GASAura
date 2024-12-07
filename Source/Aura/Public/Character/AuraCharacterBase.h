@@ -11,6 +11,7 @@ class UAbilitySystemComponent;
 class UAttributeSet;
 class UGameplayEffect;
 class UGameplayAbility;
+class UAnimMontage;
 
 UCLASS(Abstract)
 class AURA_API AAuraCharacterBase : public ACharacter, public IAbilitySystemInterface, public ICombatInterface
@@ -21,6 +22,9 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Abilities")
 	TArray<TSubclassOf<UGameplayAbility>> StartupABilities;
+
+	UPROPERTY(editAnywhere, Category = "Combat")
+	TObjectPtr<UAnimMontage> HitReactMontage;
 
 protected:
 
@@ -58,11 +62,13 @@ public:
 
 	AAuraCharacterBase();
 
-	// Heredado v�a IAbilitySystemInterface
-	UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+	// Inherit via IAbilitySystemInterface
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
 	virtual FVector GetCombatSocketLocation() override;
 
 	UAttributeSet* GetAttributesSet() const { return AttributeSet; }
+
+	virtual UAnimMontage* GetHitReactMontage_Implementation() override;
 
 };

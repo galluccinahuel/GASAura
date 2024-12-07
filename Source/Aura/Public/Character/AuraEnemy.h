@@ -32,10 +32,18 @@ protected:
 
 	virtual void InitilizeDefaultAttributes() const override;
 
+	void HitReactTagChange(const FGameplayTag CallbackTag, int32 NewCount);
+	
 public:
 
 	AAuraEnemy();
 
+	UPROPERTY(BlueprintReadOnly, category = "Combat")
+	bool bHitReacting = false;
+
+	UPROPERTY(BlueprintReadOnly, category = "Combat")
+	float BaseWalkSpeed = 250.f;
+	
 	void HighLightActor() override;
 
 	void UnHighLightActor() override;
