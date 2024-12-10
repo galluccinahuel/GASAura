@@ -27,13 +27,9 @@ protected:
 	TObjectPtr<UWidgetComponent> HealthBar;
 
 	virtual void BeginPlay() override;
-
 	virtual void InitAbilityActorInfo() override;
-
 	virtual void InitilizeDefaultAttributes() const override;
 
-	void HitReactTagChange(const FGameplayTag CallbackTag, int32 NewCount);
-	
 public:
 
 	AAuraEnemy();
@@ -59,5 +55,7 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FOnAttributeSignature OnMaxHealthChanged;
+
+	void HitReactTagChange(const FGameplayTag CallbackTag, int32 NewCount);
 
 };
