@@ -62,6 +62,11 @@ public:
 
 	AAuraCharacterBase();
 
+	virtual void Die() override;
+
+	UFUNCTION(NetMulticast, reliable)
+	virtual void MulticastHandleDeath();
+
 	// Inherit via IAbilitySystemInterface
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 

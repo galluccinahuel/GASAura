@@ -34,11 +34,16 @@ public:
 
 	AAuraEnemy();
 
+	virtual void Die() override;
+
 	UPROPERTY(BlueprintReadOnly, category = "Combat")
 	bool bHitReacting = false;
 
 	UPROPERTY(BlueprintReadOnly, category = "Combat")
 	float BaseWalkSpeed = 250.f;
+
+	UPROPERTY(EditAnywhere ,BlueprintReadOnly, category = "Combat")
+	float LifeSpan = 250.f;
 	
 	void HighLightActor() override;
 
