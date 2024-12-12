@@ -8,6 +8,7 @@ struct AuraDamageStatics
 {
 	DECLARE_ATTRIBUTE_CAPTUREDEF(Armor)
 	DECLARE_ATTRIBUTE_CAPTUREDEF(BlockChance)
+	DECLARE_ATTRIBUTE_CAPTUREDEF(ArmorPenetration)
 	
 	
 	AuraDamageStatics()
@@ -15,6 +16,7 @@ struct AuraDamageStatics
 		// Captura el atributo "Armor" de la clase UAuraAttributeSet para usarlo en cálculos de efectos.
 		DEFINE_ATTRIBUTE_CAPTUREDEF(UAuraAttributeSet, Armor, Target, false);
 		DEFINE_ATTRIBUTE_CAPTUREDEF(UAuraAttributeSet, BlockChance, Target, false);
+		DEFINE_ATTRIBUTE_CAPTUREDEF(UAuraAttributeSet, ArmorPenetration, Source, false);
 	}
 };
 
@@ -29,6 +31,7 @@ UExecCalc_Damage::UExecCalc_Damage()
 {
 	RelevantAttributesToCapture.Add(DamageStatics().ArmorDef);
 	RelevantAttributesToCapture.Add(DamageStatics().BlockChanceDef);
+	RelevantAttributesToCapture.Add(DamageStatics().ArmorPenetrationDef);
 }
 
 void UExecCalc_Damage::Execute_Implementation(
@@ -61,18 +64,37 @@ void UExecCalc_Damage::Execute_Implementation(
 	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().BlockChanceDef, EvaluationParameters, TargetBlockChance);
 	TargetBlockChance = FMath::Max<float>(TargetBlockChance, 0.f);
 
+	float TargetArmor = 0.f;
+	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().ArmorDef, EvaluationParameters, TargetArmor);
+	TargetBlockChance = FMath::Max<float>(TargetArmor, 0.f);
+
+	float SourceArmorPenetration = 0.f;
+	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().ArmorPenetrationDef, EvaluationParameters, SourceArmorPenetration);
+	SourceArmorPenetration = FMath::Max<float>(SourceArmorPenetration, 0.f);
+
 	// Normalizar BlockChance al rango [0, 1] y decidir si el ataque es bloqueado
 	const float NormalizedBlockChance = FMath::Clamp(TargetBlockChance / 100.f, 0.f, 1.f);
 	const bool bIsBlocked = FMath::FRand() < NormalizedBlockChance;
 
 	// Modificar el daño en caso de bloqueo
-	const float BlockDamageReductionFactor = 0.5f; // Reducir al 50%
+	float BlockDamageReductionFactor = 0.5f; // Reducir al 50%
 	Damage = bIsBlocked ? Damage * BlockDamageReductionFactor : Damage;
+	
+
+	// Apply Armor Penetration
+	float EffectiveArmor = FMath::Max(0.f, TargetArmor - SourceArmorPenetration);
+
+	// Apply Armor Reduction (Percentage)
+	Damage *= 1.0f / (1.0f + EffectiveArmor * 0.1f);
+
+
+
+	
 
 	// Log para depuración (opcional)
 	UE_LOG(LogTemp, Log, TEXT("Damage: %f, BlockChance: %f, Blocked: %s"), Damage, TargetBlockChance, bIsBlocked ? TEXT("Yes") : TEXT("No"));
 
 	// Crear y añadir el modificador evaluado al output
 	const FGameplayModifierEvaluatedData EvaluatedData(UAuraAttributeSet::GetIncomingDamageAttribute(), EGameplayModOp::Additive, Damage);
-	OutExecutionOutput.AddOutputModifier(EvaluatedData);
+	OutExecutionOutput.AddOutputModifier(EvaluatedData); 
 }
