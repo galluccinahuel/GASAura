@@ -2,7 +2,10 @@
 #include "AbilitySystem/ExecCalc/ExecCalc_Damage.h"
 #include "AbilitySystemComponent.h"
 #include "AuraGameplayTags.h"
+#include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/AuraAttributeSet.h"
+#include "AbilitySystem/Data/CharacterClassInfo.h"
+#include "Interfaces/CombatInterface.h"
 
 struct AuraDamageStatics
 {
@@ -42,10 +45,15 @@ void UExecCalc_Damage::Execute_Implementation(
 	const UAbilitySystemComponent* SourceASC = ExecutionParams.GetSourceAbilitySystemComponent();
 	const UAbilitySystemComponent* TargetASC = ExecutionParams.GetTargetAbilitySystemComponent();
 
-	// Obtener los actores asociados a los componentes ASC.
-	const AActor* SourceAvatar = SourceASC ? SourceASC->GetAvatarActor() : nullptr;
-	const AActor* TargetAvatar = TargetASC ? TargetASC->GetAvatarActor() : nullptr;
 
+
+	// Obtener los actores asociados a los componentes ASC.
+	AActor* SourceAvatar = SourceASC ? SourceASC->GetAvatarActor() : nullptr;
+	AActor* TargetAvatar = TargetASC ? TargetASC->GetAvatarActor() : nullptr;
+	
+	ICombatInterface* SourceCombatInterface = Cast<ICombatInterface>(SourceAvatar);
+	ICombatInterface* TargetCombatInterface = Cast<ICombatInterface>(TargetAvatar);
+	
 	// Especificación del efecto y tags de origen y objetivo.
 	const FGameplayEffectSpec& Spec = ExecutionParams.GetOwningSpec();
 	
@@ -77,11 +85,26 @@ void UExecCalc_Damage::Execute_Implementation(
 	const bool bIsBlocked = FMath::FRand() < NormalizedBlockChance;
 
 	// Modificar el daño en caso de bloqueo
-	float BlockDamageReductionFactor = 0.5f; // Reducir al 50%
+	const float BlockDamageReductionFactor = 0.5f; // Reducir al 50%
 	Damage = bIsBlocked ? Damage * BlockDamageReductionFactor : Damage;
 	
+	const UCharacterClassInfo* CharacterClassInfo = UAuraAbilitySystemLibrary::GetCharacterClassInfo(SourceAvatar);
+	
+	const FRealCurve* ArmorPenetrationCurve = CharacterClassInfo->DamageCalculationCoefficients->FindCurve(FName("ArmorPenetration"), FString());
+	const float ArmorPenetrationCoefficient = ArmorPenetrationCurve->Eval(SourceCombatInterface->GetPlayerLevel());
+	
+	//ArmorPenetration ignores a percentage of the targets armor.
+	const float EffectiveArmor = TargetArmor * (100 - SourceArmorPenetration * ArmorPenetrationCoefficient) / 100.f;
 
-	// Apply Armor Penetration
+	const FRealCurve* ArmorCoefficient = CharacterClassInfo->DamageCalculationCoefficients->FindCurve(FName("EffectiveArmor"), FString());
+	const float EffectiveArmorCoefficient = ArmorCoefficient->Eval(TargetCombatInterface->GetPlayerLevel());
+	
+	//Armor Ignores a percentage of incoming damage.
+	Damage*= (100 - EffectiveArmor * EffectiveArmorCoefficient) / 100.f;
+
+	
+	/*
+		// Apply Armor Penetration
 	float EffectiveArmor = FMath::Max(0.f, TargetArmor - SourceArmorPenetration);
 
 	// Apply Armor Reduction (Percentage)
@@ -90,7 +113,9 @@ void UExecCalc_Damage::Execute_Implementation(
 
 	// Log para depuración (opcional)
 	UE_LOG(LogTemp, Log, TEXT("Damage: %f, BlockChance: %f, Blocked: %s"), Damage, TargetBlockChance, bIsBlocked ? TEXT("Yes") : TEXT("No"));
-
+	
+	 */
+	
 	// Crear y añadir el modificador evaluado al output
 	const FGameplayModifierEvaluatedData EvaluatedData(UAuraAttributeSet::GetIncomingDamageAttribute(), EGameplayModOp::Additive, Damage);
 	OutExecutionOutput.AddOutputModifier(EvaluatedData); 
