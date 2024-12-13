@@ -88,9 +88,6 @@ void UExecCalc_Damage::Execute_Implementation(
 	Damage *= 1.0f / (1.0f + EffectiveArmor * 0.1f);
 
 
-
-	
-
 	// Log para depuración (opcional)
 	UE_LOG(LogTemp, Log, TEXT("Damage: %f, BlockChance: %f, Blocked: %s"), Damage, TargetBlockChance, bIsBlocked ? TEXT("Yes") : TEXT("No"));
 
