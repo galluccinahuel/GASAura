@@ -12,7 +12,9 @@ struct AuraDamageStatics
 	DECLARE_ATTRIBUTE_CAPTUREDEF(Armor)
 	DECLARE_ATTRIBUTE_CAPTUREDEF(BlockChance)
 	DECLARE_ATTRIBUTE_CAPTUREDEF(ArmorPenetration)
-	
+	DECLARE_ATTRIBUTE_CAPTUREDEF(CriticalHitChance)
+	DECLARE_ATTRIBUTE_CAPTUREDEF(CriticalHitDamage)
+	DECLARE_ATTRIBUTE_CAPTUREDEF(CriticalHitResistance)
 	
 	AuraDamageStatics()
 	{
@@ -20,6 +22,9 @@ struct AuraDamageStatics
 		DEFINE_ATTRIBUTE_CAPTUREDEF(UAuraAttributeSet, Armor, Target, false);
 		DEFINE_ATTRIBUTE_CAPTUREDEF(UAuraAttributeSet, BlockChance, Target, false);
 		DEFINE_ATTRIBUTE_CAPTUREDEF(UAuraAttributeSet, ArmorPenetration, Source, false);
+		DEFINE_ATTRIBUTE_CAPTUREDEF(UAuraAttributeSet, CriticalHitChance, Source, false);
+		DEFINE_ATTRIBUTE_CAPTUREDEF(UAuraAttributeSet, CriticalHitDamage, Source, false);
+		DEFINE_ATTRIBUTE_CAPTUREDEF(UAuraAttributeSet, CriticalHitResistance, Target, false);
 	}
 };
 
@@ -35,6 +40,9 @@ UExecCalc_Damage::UExecCalc_Damage()
 	RelevantAttributesToCapture.Add(DamageStatics().ArmorDef);
 	RelevantAttributesToCapture.Add(DamageStatics().BlockChanceDef);
 	RelevantAttributesToCapture.Add(DamageStatics().ArmorPenetrationDef);
+	RelevantAttributesToCapture.Add(DamageStatics().CriticalHitChanceDef);
+	RelevantAttributesToCapture.Add(DamageStatics().CriticalHitDamageDef);
+	RelevantAttributesToCapture.Add(DamageStatics().CriticalHitResistanceDef);
 }
 
 void UExecCalc_Damage::Execute_Implementation(
@@ -44,9 +52,7 @@ void UExecCalc_Damage::Execute_Implementation(
 	// Obtener los componentes de Ability System del origen y el objetivo.
 	const UAbilitySystemComponent* SourceASC = ExecutionParams.GetSourceAbilitySystemComponent();
 	const UAbilitySystemComponent* TargetASC = ExecutionParams.GetTargetAbilitySystemComponent();
-
-
-
+	
 	// Obtener los actores asociados a los componentes ASC.
 	AActor* SourceAvatar = SourceASC ? SourceASC->GetAvatarActor() : nullptr;
 	AActor* TargetAvatar = TargetASC ? TargetASC->GetAvatarActor() : nullptr;
@@ -64,8 +70,7 @@ void UExecCalc_Damage::Execute_Implementation(
 	FAggregatorEvaluateParameters EvaluationParameters;
 	EvaluationParameters.SourceTags = SourceTags;
 	EvaluationParameters.TargetTags = TargetTags;
-
-
+	
 	float Damage = Spec.GetSetByCallerMagnitude(FAuraGameplayTags::Get().Damage);
 
 	float TargetBlockChance = 0.f;
@@ -74,12 +79,15 @@ void UExecCalc_Damage::Execute_Implementation(
 
 	float TargetArmor = 0.f;
 	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().ArmorDef, EvaluationParameters, TargetArmor);
-	TargetBlockChance = FMath::Max<float>(TargetArmor, 0.f);
+	TargetArmor = FMath::Max<float>(TargetArmor, 0.f);
 
 	float SourceArmorPenetration = 0.f;
 	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().ArmorPenetrationDef, EvaluationParameters, SourceArmorPenetration);
 	SourceArmorPenetration = FMath::Max<float>(SourceArmorPenetration, 0.f);
-
+	
+	// Log inicial del daño base
+	UE_LOG(LogTemp, Log, TEXT("Daño inicial: %f"), Damage);
+	
 	// Normalizar BlockChance al rango [0, 1] y decidir si el ataque es bloqueado
 	const float NormalizedBlockChance = FMath::Clamp(TargetBlockChance / 100.f, 0.f, 1.f);
 	const bool bIsBlocked = FMath::FRand() < NormalizedBlockChance;
@@ -87,6 +95,13 @@ void UExecCalc_Damage::Execute_Implementation(
 	// Modificar el daño en caso de bloqueo
 	const float BlockDamageReductionFactor = 0.5f; // Reducir al 50%
 	Damage = bIsBlocked ? Damage * BlockDamageReductionFactor : Damage;
+
+	// Log de probabilidad de bloqueo y resultado
+	UE_LOG(LogTemp, Log, TEXT("Probabilidad de bloqueo (normalizada): %f, ¿Bloqueado?: %s"), 
+		NormalizedBlockChance, bIsBlocked ? TEXT("Sí") : TEXT("No"));
+
+	// Log de daño después de bloqueo
+	UE_LOG(LogTemp, Log, TEXT("Daño después de bloqueo: %f"), Damage);
 	
 	const UCharacterClassInfo* CharacterClassInfo = UAuraAbilitySystemLibrary::GetCharacterClassInfo(SourceAvatar);
 	
@@ -101,20 +116,42 @@ void UExecCalc_Damage::Execute_Implementation(
 	
 	//Armor Ignores a percentage of incoming damage.
 	Damage*= (100 - EffectiveArmor * EffectiveArmorCoefficient) / 100.f;
-
 	
-	/*
-		// Apply Armor Penetration
-	float EffectiveArmor = FMath::Max(0.f, TargetArmor - SourceArmorPenetration);
+	float CriticalHitChance = 0.f;
+	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().CriticalHitChanceDef, EvaluationParameters, CriticalHitChance);
+	CriticalHitChance = FMath::Max<float>(CriticalHitChance, 0.f);
 
-	// Apply Armor Reduction (Percentage)
-	Damage *= 1.0f / (1.0f + EffectiveArmor * 0.1f);
+	float CriticalHitDamage = 0.f;
+	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().CriticalHitDamageDef, EvaluationParameters, CriticalHitDamage);
+	CriticalHitDamage = FMath::Max<float>(CriticalHitDamage, 0.f);
 
+	float CriticalHitResistance = 0.f;
+	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().CriticalHitResistanceDef, EvaluationParameters, CriticalHitResistance);
+	CriticalHitResistance = FMath::Max<float>(CriticalHitResistance, 0.f);
 
-	// Log para depuración (opcional)
-	UE_LOG(LogTemp, Log, TEXT("Damage: %f, BlockChance: %f, Blocked: %s"), Damage, TargetBlockChance, bIsBlocked ? TEXT("Yes") : TEXT("No"));
+	const FRealCurve* CriticalHitResistanceCoefficient = CharacterClassInfo->DamageCalculationCoefficients->FindCurve(FName("CriticalHitResistance"), FString());
+	const float EffectiveCriticalHitResistanceCoefficient = ArmorCoefficient->Eval(TargetCombatInterface->GetPlayerLevel());
 	
-	 */
+
+	const float NormalizedCriticalHitChance = FMath::Clamp(CriticalHitChance / 100.f, 0.f, 1.f);
+	const float NormalizedCriticalHitResistance = FMath::Clamp(CriticalHitResistance / 100.f, 0.f, 1.f);
+	const bool bIsCritical = FMath::FRand() *  EffectiveCriticalHitResistanceCoefficient + NormalizedCriticalHitResistance < NormalizedCriticalHitChance;
+	constexpr  float CriticalHitDamageFactor = 2.f;
+	Damage = bIsCritical ? Damage * CriticalHitDamageFactor + CriticalHitDamage : Damage ;
+	
+	// Log de armadura y penetración
+	UE_LOG(LogTemp, Log, TEXT("Armadura efectiva: %f, Penetración de armadura: %f, Coeficiente: %f"), 
+		EffectiveArmor, SourceArmorPenetration, ArmorPenetrationCoefficient);
+
+	// Log de daño tras mitigación de armadura
+	UE_LOG(LogTemp, Log, TEXT("Daño después de mitigación por armadura: %f"), Damage);
+
+	// Log de probabilidad crítica y resultado
+	UE_LOG(LogTemp, Log, TEXT("Probabilidad crítica (normalizada): %f, Resistencia crítica (normalizada): %f, ¿Crítico?: %s"), 
+		NormalizedCriticalHitChance, NormalizedCriticalHitResistance, bIsCritical ? TEXT("Sí") : TEXT("No"));
+
+	// Log de daño final
+	UE_LOG(LogTemp, Log, TEXT("Daño final: %f"), Damage);
 	
 	// Crear y añadir el modificador evaluado al output
 	const FGameplayModifierEvaluatedData EvaluatedData(UAuraAttributeSet::GetIncomingDamageAttribute(), EGameplayModOp::Additive, Damage);
