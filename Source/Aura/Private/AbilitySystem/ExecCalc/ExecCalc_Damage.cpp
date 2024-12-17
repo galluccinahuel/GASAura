@@ -1,6 +1,7 @@
 
 #include "AbilitySystem/ExecCalc/ExecCalc_Damage.h"
 #include "AbilitySystemComponent.h"
+#include "AuraAbilityTypes.h"
 #include "AuraGameplayTags.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/AuraAttributeSet.h"
@@ -92,6 +93,15 @@ void UExecCalc_Damage::Execute_Implementation(
 	const float NormalizedBlockChance = FMath::Clamp(TargetBlockChance / 100.f, 0.f, 1.f);
 	const bool bIsBlocked = FMath::FRand() < NormalizedBlockChance;
 
+	
+	FGameplayEffectContextHandle ContextHandle = Spec.GetContext();
+	//FGameplayEffectContext* EffectContext = ContextHandle.Get();
+	//FAuraGameplayEffectContext* AuraEffectContext = static_cast<FAuraGameplayEffectContext*>(EffectContext);
+	
+	UAuraAbilitySystemLibrary::SetIsBlockedHit(ContextHandle, bIsBlocked);
+	
+
+	
 	// Modificar el daño en caso de bloqueo
 	const float BlockDamageReductionFactor = 0.5f; // Reducir al 50%
 	Damage = bIsBlocked ? Damage * BlockDamageReductionFactor : Damage;
@@ -138,6 +148,8 @@ void UExecCalc_Damage::Execute_Implementation(
 	const bool bIsCritical = FMath::FRand() *  EffectiveCriticalHitResistanceCoefficient + NormalizedCriticalHitResistance < NormalizedCriticalHitChance;
 	constexpr  float CriticalHitDamageFactor = 2.f;
 	Damage = bIsCritical ? Damage * CriticalHitDamageFactor + CriticalHitDamage : Damage ;
+	UAuraAbilitySystemLibrary::SetIsCriticalHit(ContextHandle,bIsCritical);
+
 	
 	// Log de armadura y penetración
 	UE_LOG(LogTemp, Log, TEXT("Armadura efectiva: %f, Penetración de armadura: %f, Coeficiente: %f"), 
