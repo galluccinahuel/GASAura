@@ -10,19 +10,15 @@ struct FAuraGameplayEffectContext : public FGameplayEffectContext
 
 protected:
 
+	UPROPERTY() 
 	bool bIsBlockedHit = false;
-	
 	UPROPERTY()
 	bool bIsCriticalHit = false;
-	
-	
-	
+
 public:
 
 	virtual UScriptStruct* GetScriptStruct() const override;
-
 	virtual bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess) override;
-
 	/** Creates a copy of this context, used to duplicate for later modifications */
 	virtual FAuraGameplayEffectContext* Duplicate() const override
 	{
@@ -37,13 +33,9 @@ public:
 	}
 
 	bool IsCriticalHit() const { return bIsCriticalHit; }
-
 	bool IsBlockedHit() const { return bIsBlockedHit; }
-
 	void SetIsCriticalHit(bool bInIsCriticalHit){bIsCriticalHit = bInIsCriticalHit;}
-
 	void SetIsBlockedHit(bool bInIsBlockedHit){bIsBlockedHit = bInIsBlockedHit;}
-
 };
 
 template<>

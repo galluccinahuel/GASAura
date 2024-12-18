@@ -97,14 +97,11 @@ void UExecCalc_Damage::Execute_Implementation(
 	FGameplayEffectContextHandle ContextHandle = Spec.GetContext();
 	//FGameplayEffectContext* EffectContext = ContextHandle.Get();
 	//FAuraGameplayEffectContext* AuraEffectContext = static_cast<FAuraGameplayEffectContext*>(EffectContext);
-	
-	UAuraAbilitySystemLibrary::SetIsBlockedHit(ContextHandle, bIsBlocked);
-	
 
-	
 	// Modificar el daño en caso de bloqueo
 	const float BlockDamageReductionFactor = 0.5f; // Reducir al 50%
 	Damage = bIsBlocked ? Damage * BlockDamageReductionFactor : Damage;
+	UAuraAbilitySystemLibrary::SetIsBlockedHit(ContextHandle, bIsBlocked);
 
 	// Log de probabilidad de bloqueo y resultado
 	UE_LOG(LogTemp, Log, TEXT("Probabilidad de bloqueo (normalizada): %f, ¿Bloqueado?: %s"), 
