@@ -22,7 +22,7 @@ public:
 
 	static const FAuraGameplayTags& Get() { return GameplayTags; }
 
-	static void InitilizeNativeGameplayTags();
+	static void InitializeNativeGameplayTags();
 
 	FGameplayTag Attribute_Primary_Strength;
 	FGameplayTag Attribute_Primary_Intelligence;
@@ -40,6 +40,11 @@ public:
 	FGameplayTag Attribute_Secondary_MaxHealth;
 	FGameplayTag Attribute_Secondary_MaxMana;
 
+	FGameplayTag Attribute_Resistance_Fire;
+	FGameplayTag Attribute_Resistance_Lightning;
+	FGameplayTag Attribute_Resistance_Arcane;
+	FGameplayTag Attribute_Resistance_Physical;
+
 	FGameplayTag InputTag_LMB;
 	FGameplayTag InputTag_RMB;
 	FGameplayTag InputTag_1;
@@ -49,8 +54,12 @@ public:
 
 	FGameplayTag Damage;
 	FGameplayTag Damage_Fire;
-
-	TArray<FGameplayTag> DamageTypes;
+	FGameplayTag Damage_Lightning;
+	FGameplayTag Damage_Arcane;
+	FGameplayTag Damage_Physical;
+	
+	TMap<FGameplayTag, FGameplayTag> DamageTypesToResistances;
+	
 	
 	FGameplayTag Effects_HitReact;
 };
