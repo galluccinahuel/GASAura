@@ -20,11 +20,24 @@ UOverlayWidgetController* AAuraHUD::GetOverlayWidgetController(const FWidgetCont
 
 void AAuraHUD::InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySystemComponent* ASC, UAttributeSet* AS)
 {
+	FTimerHandle TimerHandle;
+	FTimerDelegate DelegateTimer = FTimerDelegate::CreateUObject(this, &ThisClass::InitOverlayWithDelay, PC, PS, ASC, AS);
+	GetWorldTimerManager().SetTimer(TimerHandle, DelegateTimer, .4f, false);
+}
+
+void AAuraHUD::InitOverlayWithDelay(APlayerController* PC, APlayerState* PS, UAbilitySystemComponent* ASC,
+	UAttributeSet* AS)
+{
 	checkf(OverlayWidgetClass, TEXT("OverlayWidgetClass Uninitialized, please fill out BP_AuraHUD"));
 	checkf(OverlayWidgetControllerClass, TEXT("OverlayWidgetControllerClass Uninitialized, please fill out BP_AuraHUD"));
 
+	if (!GetWorld()) return;
+	
 	UUserWidget* Widget = CreateWidget<UUserWidget>(GetWorld(), OverlayWidgetClass);
+	check(Widget)
 	OverlayWidget = Cast<UAuraUserWidget>(Widget);
+	check(OverlayWidget)
+	
 	const FWidgetControllerParams WidgetControllerParams(PC, PS, ASC, AS);
 	UOverlayWidgetController* WidgetController = GetOverlayWidgetController(WidgetControllerParams);
 	OverlayWidget->SetWidgetController(WidgetController);

@@ -11,7 +11,6 @@
 #include "NavigationSystem.h"
 #include "NavigationPath.h"
 #include "GameFramework/Character.h"
-#include "Systems/MovieSceneComponentAttachmentSystem.h"
 #include "UI/Widget/DamageTextComponent.h"
 
 AAuraPlayerController::AAuraPlayerController()
@@ -29,7 +28,7 @@ void AAuraPlayerController::PlayerTick(float DeltaTime)
 
 void AAuraPlayerController::ShowDamageNumber_Implementation(float DamageAmount, ACharacter* TargetCharacter, bool bIsBlockedHit, bool bIsCriticalHit)
 {
-	if (IsValid(TargetCharacter) && DamageComponentTextClass)
+	if (IsValid(TargetCharacter) && DamageComponentTextClass && IsLocalController())
 	{
 		UDamageTextComponent* DamageText = NewObject<UDamageTextComponent>(TargetCharacter, DamageComponentTextClass);
 		DamageText->RegisterComponent();
