@@ -203,10 +203,13 @@ void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 						DrawDebugSphere(GetWorld(), PointLocation, 8.f, 8.f, FColor::Green, false, 3.f);
 					}
 
-					CachedDestination = NavPath->PathPoints[NavPath->PathPoints.Num() -1 ];
+					if (NavPath->PathPoints.Num() > 0)
+					{
+						CachedDestination = NavPath->PathPoints[NavPath->PathPoints.Num() -1 ];
 
-					// Indicamos que estamos en modo de auto-corre (auto-running) activando la bandera
-					bAutoRunning = true;
+						// Indicamos que estamos en modo de auto-corre (auto-running) activando la bandera
+						bAutoRunning = true;
+					}
 				}
 			}
 
